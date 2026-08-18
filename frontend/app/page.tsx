@@ -38,18 +38,6 @@ export default function LandingPage() {
         <div className="absolute left-1/2 top-[-10%] h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
       </div>
 
-      {/* Nav */}
-      <header className="container flex items-center justify-between py-6">
-        <div className="flex items-center gap-2 font-semibold">
-          <ScanLine className="h-6 w-6 text-primary" />
-          <span>Medical Vision Assistant</span>
-        </div>
-        <nav className="hidden gap-6 text-sm text-muted-foreground sm:flex">
-          <a href="#features" className="hover:text-foreground">Features</a>
-          <a href="#disclaimer" className="hover:text-foreground">Disclaimer</a>
-        </nav>
-      </header>
-
       {/* Hero */}
       <section className="container flex flex-col items-center py-24 text-center">
         <motion.span
