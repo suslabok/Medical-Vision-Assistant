@@ -1,0 +1,67 @@
+
+from datetime import datetime, timezone
+
+RISK_THRESHOLDS = {
+    "high": 85,
+    "moderate": 60,
+}
+
+FINDINGS_TEXT = {
+    "PNEUMONIA": "Radiographic patterns consistent with pulmonary opacity/consolidation were detected, which may indicate pneumonia.",
+    "NORMAL": "No significant radiographic abnormalities were detected in the analyzed regions.",
+}
+
+RECOMMENDATIONS_TEXT = {
+    "PNEUMONIA": "Clinical correlation is advised. Consultation with a qualified radiologist or pulmonologist is recommended for confirmatory diagnosis and treatment planning.",
+    "NORMAL": "No immediate follow-up indicated based on this analysis alone. Routine clinical judgment should still apply.",
+}
+
+
+def _risk_level(confidence: float, disease: str) -> str:
+    if disease == "NORMAL":
+        return "Low"
+    if confidence >= RISK_THRESHOLDS["high"]:
+        return "High"
+    if confidence >= RISK_THRESHOLDS["moderate"]:
+        return "Moderate"
+    return "Low-Moderate (uncertain)"
+
+
+def generate_report(disease: str, confidence: float, probabilities: dict) -> dict:
+    risk = _risk_level(confidence, disease)
+    findings = FINDINGS_TEXT.get(disease, f"The model predicted '{disease}' with the findings below.")
+    recommendation = RECOMMENDATIONS_TEXT.get(
+        disease,
+        "Consult a qualified radiologist for professional interpretation."
+    )
+
+    prob_summary = ", ".join(f"{k}: {v}%" for k, v in probabilities.items())
+
+    report_text = f"""MEDICAL VISION ASSISTANT — AI-GENERATED RESEARCH REPORT
+Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+
+FINDINGS
+{findings}
+
+MODEL OUTPUT
+Predicted class: {disease}
+Confidence: {confidence}%
+Full probability distribution: {prob_summary}
+
+RISK ASSESSMENT
+Risk level: {risk}
+This risk level reflects model confidence only and is not a clinical risk stratification.
+
+RECOMMENDATION
+{recommendation}
+
+
+
+    return {
+        "findings": findings,
+        "risk_level": risk,
+        "recommendation": recommendation,
+        "full_report_text": report_text,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
