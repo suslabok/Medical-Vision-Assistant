@@ -1,59 +1,251 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+type ModelData = {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  roc_auc: number;
+};
+
+type ComparisonData = {
+  densenet121: ModelData;
+  vit: ModelData;
+};
 
 export default function ModelsPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ComparisonData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/api/v1/models/comparison`)
-      .then((res) => res.json())
-      .then(setData);
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((result) => {
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        setData(result);
+      })
+      .catch((err) => {
+        console.error("Failed to load model comparison:", err);
+        setError(err.message);
+      });
   }, []);
 
-  if (!data || data.error) {
-    return <div className="p-8 text-center text-gray-500">{data?.error || "Loading..."}</div>;
+  if (error) {
+    return (
+      <main className="p-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-red-500">
+            Failed to load model comparison: {error}
+          </p>
+        </div>
+      </main>
+    );
   }
 
-  const chartData = ["accuracy", "precision", "recall", "f1", "roc_auc"].map((metric) => ({
-    metric: metric.toUpperCase(),
-    DenseNet121: +(data.densenet121[metric] * 100).toFixed(1),
-    ViT: +(data.vit[metric] * 100).toFixed(1),
+  if (!data) {
+    return (
+      <main className="p-8">
+        <div className="max-w-4xl mx-auto text-center text-gray-500">
+          Loading model comparison...
+        </div>
+      </main>
+    );
+  }
+
+  const chartData = [
+    "accuracy",
+    "precision",
+    "recall",
+    "f1",
+    "roc_auc",
+  ].map((metric) => ({
+    metric:
+      metric === "roc_auc"
+        ? "ROC-AUC"
+        : metric.charAt(0).toUpperCase() + metric.slice(1),
+
+    DenseNet121: Number(
+      (data.densenet121[metric as keyof ModelData] as number * 100).toFixed(1)
+    ),
+
+    ViT: Number(
+      (data.vit[metric as keyof ModelData] as number * 100).toFixed(1)
+    ),
   }));
 
   return (
-    <main className="max-w-4xl mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-8">Model Comparison: DenseNet121 vs Vision Transformer</h1>
+    <main className="max-w-5xl mx-auto p-8">
 
-      <div className="border rounded-xl p-4 dark:border-gray-700 mb-8">
-        <ResponsiveContainer width="100%" height={300}>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">
+          Model Comparison
+        </h1>
+
+        <p className="text-gray-500 mt-2">
+          DenseNet121 vs Vision Transformer (ViT)
+        </p>
+      </div>
+
+      {/* Chart */}
+      <div className="border rounded-xl p-6 dark:border-gray-700 mb-8">
+        <h2 className="text-xl font-semibold mb-6">
+          Performance Comparison
+        </h2>
+
+        <ResponsiveContainer width="100%" height={350}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="metric" fontSize={12} />
-            <YAxis domain={[0, 100]} fontSize={12} />
-            <Tooltip />
+
+            <XAxis
+              dataKey="metric"
+              fontSize={12}
+            />
+
+            <YAxis
+              domain={[0, 100]}
+              tickFormatter={(value) => `${value}%`}
+              fontSize={12}
+            />
+
+            <Tooltip
+              formatter={(value) => `${value}%`}
+            />
+
             <Legend />
-            <Bar dataKey="DenseNet121" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="ViT" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+
+            <Bar
+              dataKey="DenseNet121"
+              fill="#3b82f6"
+              radius={[4, 4, 0, 0]}
+            />
+
+            <Bar
+              dataKey="ViT"
+              fill="#8b5cf6"
+              radius={[4, 4, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div className="border rounded-xl p-4 dark:border-gray-700">
-          <h3 className="font-semibold mb-2">DenseNet121</h3>
-          <p>Params: {data.densenet121.params_millions}M</p>
-          <p>Inference: {data.densenet121.inference_ms_cpu}ms (CPU)</p>
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* DenseNet */}
+        <div className="border rounded-xl p-6 dark:border-gray-700">
+          <h2 className="text-xl font-semibold mb-5">
+            DenseNet121
+          </h2>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span>Accuracy</span>
+              <strong>
+                {(data.densenet121.accuracy * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Precision</span>
+              <strong>
+                {(data.densenet121.precision * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Recall</span>
+              <strong>
+                {(data.densenet121.recall * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>F1 Score</span>
+              <strong>
+                {(data.densenet121.f1 * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>ROC-AUC</span>
+              <strong>
+                {(data.densenet121.roc_auc * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+          </div>
         </div>
-        <div className="border rounded-xl p-4 dark:border-gray-700">
-          <h3 className="font-semibold mb-2">Vision Transformer</h3>
-          <p>Params: {data.vit.params_millions}M</p>
-          <p>Inference: {data.vit.inference_ms_cpu}ms (CPU)</p>
+
+        {/* ViT */}
+        <div className="border rounded-xl p-6 dark:border-gray-700">
+          <h2 className="text-xl font-semibold mb-5">
+            Vision Transformer (ViT)
+          </h2>
+
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span>Accuracy</span>
+              <strong>
+                {(data.vit.accuracy * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Precision</span>
+              <strong>
+                {(data.vit.precision * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Recall</span>
+              <strong>
+                {(data.vit.recall * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>F1 Score</span>
+              <strong>
+                {(data.vit.f1 * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+            <div className="flex justify-between">
+              <span>ROC-AUC</span>
+              <strong>
+                {(data.vit.roc_auc * 100).toFixed(2)}%
+              </strong>
+            </div>
+
+          </div>
         </div>
       </div>
+
     </main>
   );
 }

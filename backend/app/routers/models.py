@@ -4,15 +4,21 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/models", tags=["models"])
 
-COMPARISON_PATH = Path("ai-models/model_comparison.json")
+COMPARISON_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "ai-models"
+    / "model_comparison.json"
+)
 
 
 @router.get("/comparison")
 def get_model_comparison():
     if not COMPARISON_PATH.exists():
-        return {"error": "Comparison data not found. Train and save both models first."}
+        return {
+            "error": f"Comparison data not found: {COMPARISON_PATH}"
+        }
 
-    with open(COMPARISON_PATH) as f:
+    with open(COMPARISON_PATH, "r") as f:
         data = json.load(f)
 
     return data

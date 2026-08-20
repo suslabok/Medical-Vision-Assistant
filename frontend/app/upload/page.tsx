@@ -82,9 +82,6 @@ export default function UploadPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <h1 className="text-3xl font-bold mb-2">Upload Chest X-Ray</h1>
-      <p className="text-muted-foreground mb-8 text-sm">
-        Research demo only — not for clinical use.
-      </p>
 
       {!preview ? (
         <div
